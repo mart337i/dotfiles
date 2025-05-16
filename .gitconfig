@@ -1,0 +1,5 @@
+[user]
+    name = Martin egeskov
+    email = *@email.com
+[core]
+    editor = nano
