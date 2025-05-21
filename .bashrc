@@ -117,3 +117,5 @@ export PS1="\[\033[32m\]\u@\h \[\033[34m\]\w\[\033[31m\]\$(parse_git_branch)\[\0
 # Source goto
 [[ -s "/usr/local/share/goto.sh" ]] && source /usr/local/share/goto.sh
 
+export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] "
+PROMPT_COMMAND="history -a;$PROMPT_COMMAND"
