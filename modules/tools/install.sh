@@ -55,23 +55,36 @@ install_fzf() {
 install_goto() {
     if ! command -v goto >/dev/null 2>&1; then
         log_info "Installing goto..."
-        rm -rf /tmp/goto
-        git clone https://github.com/iridakos/goto.git /tmp/goto
-        cd /tmp/goto
         
-        if command -v sudo >/dev/null 2>&1; then
-            log_info "goto requires sudo for system-wide installation"
-            if sudo ./install; then
-                log_info "goto installed successfully"
+        # Use a unique temporary directory to avoid conflicts
+        local temp_dir="/tmp/goto-install-$$"
+        rm -rf "$temp_dir"
+        
+        if git clone https://github.com/iridakos/goto.git "$temp_dir"; then
+            cd "$temp_dir"
+            
+            if command -v sudo >/dev/null 2>&1; then
+                log_info "goto requires sudo for system-wide installation"
+                if sudo ./install; then
+                    log_info "goto installed successfully"
+                else
+                    log_warning "goto installation failed"
+                fi
             else
-                log_warning "goto installation failed"
+                log_warning "sudo not available, cannot install goto"
             fi
+            
+            cd - >/dev/null
+            
+            # Force cleanup with proper permissions
+            chmod -R u+w "$temp_dir" 2>/dev/null || true
+            rm -rf "$temp_dir" 2>/dev/null || {
+                log_warning "Could not clean up temporary directory: $temp_dir"
+                log_info "You may need to manually remove it later"
+            }
         else
-            log_warning "sudo not available, cannot install goto"
+            log_warning "Failed to clone goto repository"
         fi
-        
-        cd - >/dev/null
-        rm -rf /tmp/goto
     else
         log_info "goto already installed"
     fi
