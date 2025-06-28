@@ -19,55 +19,25 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Create default system files
-create_default_bashrc() {
-    log_info "Creating default .bashrc..."
+# Copy system defaults from /etc/skel
+copy_from_skel() {
+    local filename="$1"
+    local skel_file="/etc/skel/$filename"
+    local target_file="$HOME/$filename"
     
-    cat > "$HOME/.bashrc" << 'EOF'
-# ~/.bashrc: executed by bash(1) for non-login shells.
-
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
-
-# Basic history settings
-HISTCONTROL=ignoreboth
-HISTSIZE=1000
-HISTFILESIZE=2000
-shopt -s histappend
-
-# Check window size after each command
-shopt -s checkwinsize
-
-# Enable color support for ls and add handy aliases
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-    alias grep='grep --color=auto'
-fi
-
-# Some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-
-# Enable programmable completion features
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
-  fi
-fi
-EOF
-    
-    log_success "Default .bashrc created"
+    if [ -f "$skel_file" ]; then
+        log_info "Copying system default: $skel_file -> $target_file"
+        cp "$skel_file" "$target_file"
+        log_success "Restored $filename from system defaults"
+    else
+        log_warning "System default not found: $skel_file"
+        return 1
+    fi
 }
 
-create_default_gitconfig() {
-    log_info "Creating default .gitconfig..."
+# Create minimal gitconfig if no system default exists
+create_minimal_gitconfig() {
+    log_info "Creating minimal .gitconfig..."
     
     cat > "$HOME/.gitconfig" << 'EOF'
 [user]
@@ -75,16 +45,11 @@ create_default_gitconfig() {
     email = your.email@example.com
 [core]
     editor = nano
-    autocrlf = input
 [init]
     defaultBranch = main
-[pull]
-    rebase = false
-[push]
-    default = simple
 EOF
     
-    log_success "Default .gitconfig created"
+    log_success "Minimal .gitconfig created"
     log_warning "Please update your name and email in ~/.gitconfig"
 }
 
@@ -109,13 +74,18 @@ reset_to_defaults() {
                 # Create appropriate default file
                 case "$file" in
                     "$HOME/.bashrc")
-                        create_default_bashrc
+                        if ! copy_from_skel ".bashrc"; then
+                            log_warning "Could not copy .bashrc from /etc/skel"
+                            log_info "Your shell may not work properly without .bashrc"
+                        fi
                         ;;
                     "$HOME/.gitconfig")
-                        create_default_gitconfig
+                        if ! copy_from_skel ".gitconfig"; then
+                            create_minimal_gitconfig
+                        fi
                         ;;
                     "$HOME/.bash_aliases")
-                        log_info "Removing .bash_aliases (not creating default)"
+                        copy_from_skel ".bash_aliases" || log_info "No system default for .bash_aliases"
                         ;;
                 esac
             fi
@@ -193,7 +163,7 @@ main_reset() {
     local backup_count=$(find "$HOME" -maxdepth 1 -name ".dotfiles-backup-*" -type d 2>/dev/null | wc -l)
     
     log_info "Choose reset option:"
-    echo "  1) Reset to system defaults (creates basic config files)"
+    echo "  1) Reset to system defaults (from /etc/skel)"
     echo "  2) Restore from backup (if available)"
     echo "  3) Cancel"
     echo
