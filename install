@@ -248,20 +248,20 @@ case "${1:-}" in
     --help|-h)
         echo "Usage: $0 [options]"
         echo "Options:"
-        echo "  --help, -h      Show this help message"
-        echo "  --config, -c    Edit configuration file"
-        echo "  --uninstall, -u Run uninstall script"
+        echo "  --help, -h    Show this help message"
+        echo "  --config, -c  Edit configuration file"
+        echo "  --reset, -r   Reset dotfiles to defaults"
         exit 0
         ;;
     --config|-c)
         ${EDITOR:-nano} "$CONFIG_FILE"
         exit 0
         ;;
-    --uninstall|-u)
-        if [ -f "$SCRIPT_DIR/uninstall" ]; then
-            exec "$SCRIPT_DIR/uninstall" "${@:2}"
+    --reset|-r)
+        if [ -f "$SCRIPT_DIR/reset" ]; then
+            exec "$SCRIPT_DIR/reset" "${@:2}"
         else
-            log_error "Uninstall script not found at: $SCRIPT_DIR/uninstall"
+            log_error "Reset script not found at: $SCRIPT_DIR/reset"
             exit 1
         fi
         ;;
