@@ -37,15 +37,65 @@ xterm*|rxvt*)
     ;;
 esac
 
+alias home='cd ~'
+alias cd..='cd ..'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
+alias .....='cd ../../../..'
+
+alias rmd='/bin/rm  --recursive --force --verbose '
+
+
+alias la='ls -Alh'                # show hidden files
+alias ls='ls -aFh --color=always' # add colors and file type extensions
+alias lx='ls -lXBh'               # sort by extension
+alias lk='ls -lSrh'               # sort by size
+alias lc='ls -ltcrh'              # sort by change time
+alias lu='ls -lturh'              # sort by access time
+alias lr='ls -lRh'                # recursive ls
+alias lt='ls -ltrh'               # sort by date
+alias lm='ls -alh |more'          # pipe through 'more'
+alias lw='ls -xAh'                # wide listing format
+alias ll='ls -Fls'                # long listing format
+alias labc='ls -lap'              # alphabetical sort
+alias lf="ls -l | egrep -v '^d'"  # files only
+alias ldir="ls -l | egrep '^d'"   # directories only
+alias lla='ls -Al'                # List and Hidden Files
+alias las='ls -A'                 # Hidden Files
+alias lls='ls -l'                 # List
+
+
+alias mx='chmod a+x'
+alias 000='chmod -R 000'
+alias 644='chmod -R 644'
+alias 666='chmod -R 666'
+alias 755='chmod -R 755'
+alias 777='chmod -R 777'
+
+# aliases to show disk space and space used in a folder
+alias diskspace="du -S | sort -n -r |more"
+alias folders='du -h --max-depth=1'
+alias folderssort='find . -maxdepth 1 -type d -print0 | xargs -0 du -sk | sort -rn'
+alias tree='tree -CAhF --dirsfirst'
+alias treed='tree -CAFd'
+alias mountedinfo='df -hT'
+
+alias docker-clean=' \
+  docker container prune -f ; \
+  docker image prune -f ; \
+  docker network prune -f ; \
+  docker volume prune -f '
+
+
 
 # WSL specefic
 alias explore='explorer.exe .'
+alias rm-zone='find . -name "*:Zone.Identifier" -type f -delete'
 
 # Python
 alias venv='python3 -m venv .venv && source .venv/bin/activate'
+
 ## See https://github.com/github/gitignore/ for more .gitignore's
 alias gitignore-python='curl -s https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore > .gitignore'
 
@@ -119,3 +169,21 @@ export PS1="\[\033[32m\]\u@\h \[\033[34m\]\w\[\033[31m\]\$(parse_git_branch)\[\0
 
 export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] "
 PROMPT_COMMAND="history -a;$PROMPT_COMMAND"
+
+alias whatismyip="whatsmyip"
+function whatsmyip () {
+    # Internal IP Lookup.
+    if command -v ip &> /dev/null; then
+        echo -n "Internal IP: "
+        ip addr show wlan0 | grep "inet " | awk '{print $2}' | cut -d/ -f1
+    else
+        echo -n "Internal IP: "
+        ifconfig wlan0 | grep "inet " | awk '{print $2}'
+    fi
+
+    # External IP Lookup
+    echo -n "External IP: "
+    curl -s ifconfig.me
+}
+
+eval "$(starship init bash)"

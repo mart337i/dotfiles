@@ -11,4 +11,6 @@ curl -LO https://github.com/ClementTsang/bottom/releases/download/0.10.2/bottom_
 sudo dpkg -i bottom_0.10.2-1_amd64.deb
 rm bottom_0.10.2-1_amd64.deb
 
+curl -sS https://starship.rs/install.sh | sh
+
 cat vscode-extensions.txt | xargs -n 1 code --install-extension
