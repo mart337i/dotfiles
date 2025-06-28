@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir -p ~/.git-hooks
 
 # Configure Git to use this directory globally
@@ -14,7 +16,7 @@ TAGS="FIX|REF|ADD|REM|REV|MOV|REL|IMP|MERGE|CLA|I18N|PERF"
 COMMIT_MSG=$(cat "$1")
 
 # Check if the commit message contains at least one valid tag
-if ! echo "$COMMIT_MSG" | grep -qE "\[($TAGS)\]"; then
+if ! echo "$COMMIT_MSG" | grep -qE "\\[($TAGS)\\]"; then
     echo "Error: Commit message must contain one of the following tags:"
     echo "[FIX], [REF], [ADD], [REM], [REV], [MOV], [REL], [IMP], [MERGE], [CLA], [I18N], [PERF]"
     exit 1
@@ -23,3 +25,5 @@ EOF
 
 # Make the hook executable
 chmod +x ~/.git-hooks/commit-msg
+
+echo "Git hooks installed successfully!"

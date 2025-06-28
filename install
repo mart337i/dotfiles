@@ -1,0 +1,150 @@
+#!/bin/bash
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+DOTFILES_DIR="$HOME/.dotfiles"
+CONFIG_FILE="$DOTFILES_DIR/config.yaml"
+BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
+
+# Helper functions
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# Check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Parse YAML config (simple parser for our needs)
+get_config() {
+    local key="$1"
+    if [ -f "$CONFIG_FILE" ]; then
+        grep -E "^\s*${key}:" "$CONFIG_FILE" | sed 's/.*: *//' | tr -d '"' | head -1
+    fi
+}
+
+is_module_enabled() {
+    local module="$1"
+    local enabled=$(get_config "modules.${module}")
+    [ "$enabled" = "true" ]
+}
+
+# Backup existing files
+backup_file() {
+    local file="$1"
+    if [ -f "$file" ] || [ -L "$file" ]; then
+        mkdir -p "$BACKUP_DIR"
+        cp -L "$file" "$BACKUP_DIR/$(basename "$file")" 2>/dev/null || true
+        log_info "Backed up $file"
+    fi
+}
+
+# Create symlink with backup
+create_symlink() {
+    local source="$1"
+    local target="$2"
+    
+    if [ -f "$target" ] || [ -L "$target" ]; then
+        backup_file "$target"
+        rm -f "$target"
+    fi
+    
+    ln -sf "$source" "$target"
+    log_success "Linked $source -> $target"
+}
+
+# Install modules
+install_shell_module() {
+    log_info "Installing shell module..."
+    create_symlink "$DOTFILES_DIR/modules/shell/bashrc" "$HOME/.bashrc"
+    
+    # Source additional shell configs
+    if [ -f "$DOTFILES_DIR/modules/shell/bash_aliases" ]; then
+        create_symlink "$DOTFILES_DIR/modules/shell/bash_aliases" "$HOME/.bash_aliases"
+    fi
+}
+
+install_git_module() {
+    log_info "Installing git module..."
+    create_symlink "$DOTFILES_DIR/modules/git/gitconfig" "$HOME/.gitconfig"
+    
+    # Install git hooks if enabled
+    if [ "$(get_config 'settings.git.enforce_commit_tags')" = "true" ]; then
+        bash "$DOTFILES_DIR/modules/git/install-hooks.sh"
+    fi
+}
+
+install_tools_module() {
+    log_info "Installing tools module..."
+    bash "$DOTFILES_DIR/modules/tools/install.sh"
+}
+
+install_vscode_module() {
+    log_info "Installing VS Code module..."
+    if command_exists code && [ "$(get_config 'settings.vscode.auto_install_extensions')" = "true" ]; then
+        bash "$DOTFILES_DIR/modules/vscode/install.sh"
+    else
+        log_warning "VS Code not found or auto-install disabled"
+    fi
+}
+
+install_python_module() {
+    log_info "Installing Python module..."
+    bash "$DOTFILES_DIR/modules/python/install.sh"
+}
+
+install_docker_module() {
+    log_info "Installing Docker module..."
+    # Docker aliases are included in shell module
+    log_success "Docker aliases configured in shell"
+}
+
+# Main installation
+main() {
+    log_info "Starting dotfiles installation..."
+    
+    # Check if we're in the right directory
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log_error "Config file not found. Make sure you're running this from the dotfiles directory."
+        exit 1
+    fi
+    
+    # Install enabled modules
+    if is_module_enabled "shell"; then install_shell_module; fi
+    if is_module_enabled "git"; then install_git_module; fi
+    if is_module_enabled "tools"; then install_tools_module; fi
+    if is_module_enabled "vscode"; then install_vscode_module; fi
+    if is_module_enabled "python"; then install_python_module; fi
+    if is_module_enabled "docker"; then install_docker_module; fi
+    
+    log_success "Dotfiles installation completed!"
+    log_info "Backup created at: $BACKUP_DIR"
+    log_info "Please restart your shell or run: source ~/.bashrc"
+}
+
+# Handle command line arguments
+case "${1:-}" in
+    --help|-h)
+        echo "Usage: $0 [options]"
+        echo "Options:"
+        echo "  --help, -h    Show this help message"
+        echo "  --config, -c  Edit configuration file"
+        exit 0
+        ;;
+    --config|-c)
+        ${EDITOR:-nano} "$CONFIG_FILE"
+        exit 0
+        ;;
+    *)
+        main "$@"
+        ;;
+esac

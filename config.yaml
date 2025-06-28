@@ -1,0 +1,30 @@
+# Dotfiles Configuration
+# Enable/disable modules by setting to true/false
+
+modules:
+  shell: true          # Bash configuration, aliases, prompt
+  git: true           # Git configuration and hooks
+  tools: true         # CLI tools (fzf, starship, bottom, goto)
+  vscode: true        # VS Code extensions
+  python: true        # Python-specific configurations
+  docker: true        # Docker aliases and configurations
+
+# Module-specific settings
+settings:
+  git:
+    name: "Martin egeskov"
+    email: "*@email.com"
+    editor: "nano"
+    enforce_commit_tags: true
+  
+  shell:
+    enable_starship: true
+    enable_fzf: true
+    history_size: 2000
+    
+  tools:
+    install_bottom: true
+    install_goto: true
+    
+  vscode:
+    auto_install_extensions: true
