@@ -250,20 +250,11 @@ case "${1:-}" in
         echo "Options:"
         echo "  --help, -h    Show this help message"
         echo "  --config, -c  Edit configuration file"
-        echo "  --reset, -r   Reset dotfiles to defaults"
         exit 0
         ;;
     --config|-c)
         ${EDITOR:-nano} "$CONFIG_FILE"
         exit 0
-        ;;
-    --reset|-r)
-        if [ -f "$SCRIPT_DIR/reset" ]; then
-            exec "$SCRIPT_DIR/reset" "${@:2}"
-        else
-            log_error "Reset script not found at: $SCRIPT_DIR/reset"
-            exit 1
-        fi
         ;;
     *)
         main "$@"

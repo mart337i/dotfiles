@@ -194,6 +194,21 @@ git pull
 - Backups are stored in `~/.dotfiles-backup-TIMESTAMP/`
 - To restore a backup, copy files from the backup directory back to your home directory
 
+### Resetting to System Defaults
+
+If you want to remove dotfiles and restore system defaults:
+
+```bash
+# Remove dotfiles symlinks
+rm ~/.bashrc ~/.gitconfig ~/.bash_aliases
+
+# Restore system defaults from /etc/skel
+cp /etc/skel/.* ~/
+
+# Or restore from backup
+cp ~/.dotfiles-backup-TIMESTAMP/* ~/
+```
+
 ## Customization
 
 Feel free to modify the configuration files in the `modules/` directory to suit your preferences. The dotfiles are designed to be easily customizable and extensible.
