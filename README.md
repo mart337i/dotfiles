@@ -2,17 +2,27 @@
 
 A modular and configurable collection of dotfiles for a customized development environment.
 
-## Quick Install
+## Installation
+
+### Quick Install
+
+Clone the repository and run the installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mart337i/dotfiles/main/install | bash
+git clone https://github.com/mart337i/dotfiles.git ~/.dotfiles
+cd ~/.dotfiles
+./install
 ```
 
-Or clone and install:
+### What Gets Installed
 
-```bash
-git clone https://github.com/mart337i/dotfiles.git ~/.dotfiles && ~/.dotfiles/install
-```
+The installer will:
+- Create backups of existing configuration files
+- Create symbolic links to dotfiles configurations
+- Install CLI tools (if enabled)
+- Configure shell, git, and other development tools
+
+All existing configurations are automatically backed up to `~/.dotfiles-backup-TIMESTAMP/` before installation.
 
 ## Features
 
@@ -20,34 +30,42 @@ git clone https://github.com/mart337i/dotfiles.git ~/.dotfiles && ~/.dotfiles/in
 - **Configurable**: YAML-based configuration system
 - **Backup System**: Automatic backup of existing configurations
 - **Smart Installation**: Only installs what you need
+- **Cross-platform**: Works on Linux and macOS
 
-## Modules
+## Available Modules
 
-- **Shell**: Bash configuration, aliases, and prompt customization
-- **Git**: Git configuration and commit message hooks
-- **Tools**: CLI tools (fzf, starship, bottom, goto)
-- **VS Code**: Extension management
-- **Python**: Python-specific configurations
-- **Docker**: Docker aliases and utilities
+| Module | Description | What it includes |
+|--------|-------------|------------------|
+| **Shell** | Bash configuration and aliases | Custom prompt, history settings, useful aliases |
+| **Git** | Git configuration and aliases | User settings, colors, helpful aliases |
+| **Tools** | CLI productivity tools | fzf, starship, bottom, goto |
+| **VS Code** | VS Code extensions | Automatically installs configured extensions |
+| **Python** | Python development setup | Python-specific configurations |
+| **Docker** | Docker utilities | Docker aliases and shortcuts |
 
 ## Configuration
 
-Edit the configuration file to customize your installation:
+### Quick Configuration
+
+Edit the configuration file:
 
 ```bash
-~/.dotfiles/install --config
+cd ~/.dotfiles
+./install --config
 ```
 
-Or manually edit `~/.dotfiles/config.yaml`:
+### Manual Configuration
+
+Edit `~/.dotfiles/config.yaml` to customize your installation:
 
 ```yaml
 modules:
-  shell: true
-  git: true
-  tools: true
-  vscode: false  # Disable VS Code module
-  python: true
-  docker: true
+  shell: true          # Bash configuration, aliases, prompt
+  git: true           # Git configuration and hooks
+  tools: true         # CLI tools (fzf, starship, bottom, goto)
+  vscode: true        # VS Code extensions
+  python: true        # Python-specific configurations
+  docker: true        # Docker aliases and configurations
 
 settings:
   git:
@@ -55,33 +73,127 @@ settings:
     email: "your.email@example.com"
     editor: "nano"
     enforce_commit_tags: true
+  
+  shell:
+    enable_starship: true
+    enable_fzf: true
+    history_size: 2000
+    
+  tools:
+    install_bottom: true
+    install_goto: true
+    
+  vscode:
+    auto_install_extensions: true
 ```
+
+### Module Settings
+
+- **shell**: Controls bash configuration and prompt
+- **git**: Sets up git user info and preferences
+- **tools**: Installs CLI productivity tools
+- **vscode**: Manages VS Code extension installation
+- **python**: Python development environment setup
+- **docker**: Docker aliases and utilities
 
 ## Usage
 
-- **Install**: `~/.dotfiles/install`
-- **Configure**: `~/.dotfiles/install --config`
-- **Help**: `~/.dotfiles/install --help`
+### Commands
 
-## Module Structure
+```bash
+cd ~/.dotfiles
 
+# Install dotfiles
+./install
+
+# Edit configuration
+./install --config
+
+# Show help
+./install --help
 ```
-modules/
-├── shell/          # Bash configuration
-├── git/            # Git setup and hooks
-├── tools/          # CLI tools installation
-├── vscode/         # VS Code extensions
-├── python/         # Python configurations
-└── docker/         # Docker utilities
+
+### After Installation
+
+1. **Restart your shell** or run:
+   ```bash
+   source ~/.bashrc
+   ```
+
+2. **Verify installation**:
+   ```bash
+   # Run the verification script
+   ./verify
+   
+   # Or check manually
+   fzf --version
+   starship --version
+   git config --list
+   ```
+
+### Updating
+
+To update your dotfiles:
+
+```bash
+cd ~/.dotfiles
+git pull
+./install
 ```
 
-## Adding New Modules
+## What Gets Configured
 
-1. Create a new directory in `modules/`
-2. Add an `install.sh` script
-3. Update `config.yaml` to include the new module
-4. Update the main `install` script to handle the new module
+### Shell (Bash)
+- Custom prompt with git branch display
+- Extensive aliases for navigation and file operations
+- History configuration and management
+- Color-coded output
+- Integration with fzf and starship (if installed)
 
-## Backup
+### Git
+- User configuration (name, email, editor)
+- Helpful aliases (st, co, br, lg, etc.)
+- Color-coded output
+- Better log formatting
+- Sensible defaults for push/pull behavior
 
-Your existing configurations are automatically backed up to `~/.dotfiles-backup-TIMESTAMP/` before installation.
+### CLI Tools
+- **fzf**: Fuzzy finder for files and command history
+- **starship**: Cross-shell prompt with git integration
+- **bottom**: Modern system monitor
+- **goto**: Directory bookmarking tool
+
+### VS Code
+- Automatic installation of configured extensions
+- Extensions include: Python, Docker, Git Graph, and more
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Permission denied**: Make sure the install script is executable:
+   ```bash
+   chmod +x ~/.dotfiles/install
+   ```
+
+2. **Tools not installing**: Some tools require sudo access. Make sure you can run sudo commands.
+
+3. **VS Code extensions not installing**: Ensure VS Code is installed and the `code` command is available in your PATH.
+
+4. **Configuration not taking effect**: Restart your shell or run `source ~/.bashrc`.
+
+### Getting Help
+
+- Check the install script help: `./install --help`
+- View current configuration: `cat ~/.dotfiles/config.yaml`
+- Check backup location: `ls ~/.dotfiles-backup-*`
+
+## Backup and Recovery
+
+- All existing configurations are backed up before installation
+- Backups are stored in `~/.dotfiles-backup-TIMESTAMP/`
+- To restore a backup, copy files from the backup directory back to your home directory
+
+## Customization
+
+Feel free to modify the configuration files in the `modules/` directory to suit your preferences. The dotfiles are designed to be easily customizable and extensible.

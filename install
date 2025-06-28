@@ -9,7 +9,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-DOTFILES_DIR="$HOME/.dotfiles"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$SCRIPT_DIR"
 CONFIG_FILE="$DOTFILES_DIR/config.yaml"
 BACKUP_DIR="$HOME/.dotfiles-backup-$(date +%Y%m%d-%H%M%S)"
 
@@ -24,11 +25,23 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Parse YAML config (simple parser for our needs)
+# Parse YAML config (improved parser)
 get_config() {
     local key="$1"
     if [ -f "$CONFIG_FILE" ]; then
-        grep -E "^\s*${key}:" "$CONFIG_FILE" | sed 's/.*: *//' | tr -d '"' | head -1
+        # Handle nested keys like modules.shell or settings.git.name
+        if [[ "$key" == *.* ]]; then
+            local section=$(echo "$key" | cut -d. -f1)
+            local subkey=$(echo "$key" | cut -d. -f2-)
+            awk -v section="$section" -v subkey="$subkey" '
+                /^[a-zA-Z]/ { current_section = $1; gsub(/:/, "", current_section) }
+                current_section == section && $0 ~ "^  " subkey ":" {
+                    gsub(/^  /, ""); gsub(subkey ":", ""); gsub(/^ */, ""); gsub(/"/, ""); gsub(/#.*/, ""); gsub(/[ \t]*$/, ""); print; exit
+                }
+            ' "$CONFIG_FILE"
+        else
+            grep -E "^\s*${key}:" "$CONFIG_FILE" | sed 's/.*: *//' | sed 's/#.*//' | tr -d '"' | sed 's/[ \t]*$//' | head -1
+        fi
     fi
 }
 
@@ -71,35 +84,69 @@ install_shell_module() {
     if [ -f "$DOTFILES_DIR/modules/shell/bash_aliases" ]; then
         create_symlink "$DOTFILES_DIR/modules/shell/bash_aliases" "$HOME/.bash_aliases"
     fi
+    
+    log_success "Shell module installed"
 }
 
 install_git_module() {
     log_info "Installing git module..."
-    create_symlink "$DOTFILES_DIR/modules/git/gitconfig" "$HOME/.gitconfig"
+    
+    # Check if gitconfig exists
+    if [ ! -f "$DOTFILES_DIR/modules/git/gitconfig" ]; then
+        log_warning "gitconfig not found, creating basic configuration..."
+        create_git_config
+    else
+        create_symlink "$DOTFILES_DIR/modules/git/gitconfig" "$HOME/.gitconfig"
+    fi
     
     # Install git hooks if enabled
     if [ "$(get_config 'settings.git.enforce_commit_tags')" = "true" ]; then
-        bash "$DOTFILES_DIR/modules/git/install-hooks.sh"
+        if [ -f "$DOTFILES_DIR/modules/git/install-hooks.sh" ]; then
+            bash "$DOTFILES_DIR/modules/git/install-hooks.sh"
+        else
+            log_warning "Git hooks script not found"
+        fi
     fi
+    
+    log_success "Git module installed"
 }
 
 install_tools_module() {
     log_info "Installing tools module..."
-    bash "$DOTFILES_DIR/modules/tools/install.sh"
+    if [ -f "$DOTFILES_DIR/modules/tools/install.sh" ]; then
+        bash "$DOTFILES_DIR/modules/tools/install.sh"
+    else
+        log_warning "Tools install script not found"
+    fi
+    log_success "Tools module processed"
 }
 
 install_vscode_module() {
     log_info "Installing VS Code module..."
-    if command_exists code && [ "$(get_config 'settings.vscode.auto_install_extensions')" = "true" ]; then
-        bash "$DOTFILES_DIR/modules/vscode/install.sh"
+    if command_exists code; then
+        if [ "$(get_config 'settings.vscode.auto_install_extensions')" = "true" ]; then
+            if [ -f "$DOTFILES_DIR/modules/vscode/install.sh" ]; then
+                bash "$DOTFILES_DIR/modules/vscode/install.sh"
+            else
+                log_warning "VS Code install script not found"
+            fi
+        else
+            log_info "VS Code extension auto-install disabled"
+        fi
     else
-        log_warning "VS Code not found or auto-install disabled"
+        log_warning "VS Code not found, skipping extension installation"
     fi
+    log_success "VS Code module processed"
 }
 
 install_python_module() {
     log_info "Installing Python module..."
-    bash "$DOTFILES_DIR/modules/python/install.sh"
+    if [ -f "$DOTFILES_DIR/modules/python/install.sh" ]; then
+        bash "$DOTFILES_DIR/modules/python/install.sh"
+    else
+        log_warning "Python install script not found"
+    fi
+    log_success "Python module processed"
 }
 
 install_docker_module() {
@@ -108,27 +155,92 @@ install_docker_module() {
     log_success "Docker aliases configured in shell"
 }
 
+# Create basic git config if it doesn't exist
+create_git_config() {
+    local git_name=$(get_config "settings.git.name")
+    local git_email=$(get_config "settings.git.email")
+    local git_editor=$(get_config "settings.git.editor")
+    
+    if [ -z "$git_name" ]; then git_name="Your Name"; fi
+    if [ -z "$git_email" ]; then git_email="your.email@example.com"; fi
+    if [ -z "$git_editor" ]; then git_editor="nano"; fi
+    
+    cat > "$DOTFILES_DIR/modules/git/gitconfig" << EOF
+[user]
+    name = $git_name
+    email = $git_email
+[core]
+    editor = $git_editor
+    autocrlf = input
+[init]
+    defaultBranch = main
+[pull]
+    rebase = false
+[push]
+    default = simple
+EOF
+    
+    create_symlink "$DOTFILES_DIR/modules/git/gitconfig" "$HOME/.gitconfig"
+}
+
 # Main installation
 main() {
     log_info "Starting dotfiles installation..."
+    log_info "Dotfiles directory: $DOTFILES_DIR"
     
     # Check if we're in the right directory
     if [ ! -f "$CONFIG_FILE" ]; then
-        log_error "Config file not found. Make sure you're running this from the dotfiles directory."
+        log_error "Config file not found at: $CONFIG_FILE"
+        log_error "Make sure you're running this from the dotfiles directory."
         exit 1
     fi
     
-    # Install enabled modules
-    if is_module_enabled "shell"; then install_shell_module; fi
-    if is_module_enabled "git"; then install_git_module; fi
-    if is_module_enabled "tools"; then install_tools_module; fi
-    if is_module_enabled "vscode"; then install_vscode_module; fi
-    if is_module_enabled "python"; then install_python_module; fi
-    if is_module_enabled "docker"; then install_docker_module; fi
+    # Create modules directory if it doesn't exist
+    mkdir -p "$DOTFILES_DIR/modules"
     
-    log_success "Dotfiles installation completed!"
-    log_info "Backup created at: $BACKUP_DIR"
-    log_info "Please restart your shell or run: source ~/.bashrc"
+    # Install enabled modules
+    local modules_installed=0
+    
+    if is_module_enabled "shell"; then 
+        install_shell_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if is_module_enabled "git"; then 
+        install_git_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if is_module_enabled "tools"; then 
+        install_tools_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if is_module_enabled "vscode"; then 
+        install_vscode_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if is_module_enabled "python"; then 
+        install_python_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if is_module_enabled "docker"; then 
+        install_docker_module
+        modules_installed=$((modules_installed + 1))
+    fi
+    
+    if [ $modules_installed -eq 0 ]; then
+        log_warning "No modules were enabled for installation"
+        log_info "Edit $CONFIG_FILE to enable modules"
+    else
+        log_success "Dotfiles installation completed! ($modules_installed modules installed)"
+        if [ -d "$BACKUP_DIR" ]; then
+            log_info "Backup created at: $BACKUP_DIR"
+        fi
+        log_info "Please restart your shell or run: source ~/.bashrc"
+    fi
 }
 
 # Handle command line arguments
